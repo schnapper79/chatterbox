@@ -28,7 +28,7 @@ func NewRunner(ctx context.Context, Cancel context.CancelFunc, llamaPath, ModelP
 		if v == "" {
 			argSlice = append(argSlice, k)
 		} else {
-			argSlice = append(argSlice, fmt.Sprintf("%s %s", k, v))
+			argSlice = append(argSlice, k, v)
 		}
 	}
 
