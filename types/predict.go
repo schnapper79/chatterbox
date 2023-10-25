@@ -52,7 +52,7 @@ type Prediction_Request struct {
 }
 
 func NewPredictionRequestWithDefaults() *Prediction_Request {
-	pr := &Prediction_Request{}
+	pr := Prediction_Request{}
 	t := reflect.TypeOf(pr)
 	v := reflect.ValueOf(&pr).Elem()
 
@@ -83,5 +83,5 @@ func NewPredictionRequestWithDefaults() *Prediction_Request {
 			}
 		}
 	}
-	return pr
+	return &pr
 }

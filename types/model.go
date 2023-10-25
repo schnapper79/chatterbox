@@ -34,7 +34,7 @@ type Model_Request struct {
 }
 
 func NewModelRequestWithDefaults() *Model_Request {
-	mr := &Model_Request{}
+	mr := Model_Request{}
 	t := reflect.TypeOf(mr)
 	v := reflect.ValueOf(&mr).Elem()
 
@@ -60,7 +60,7 @@ func NewModelRequestWithDefaults() *Model_Request {
 			}
 		}
 	}
-	return mr
+	return &mr
 }
 func (mr *Model_Request) ToMap() map[string]string {
 	m := make(map[string]string)
