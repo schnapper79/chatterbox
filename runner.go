@@ -19,20 +19,21 @@ type Runner struct {
 	Config    *types.Model_Request
 }
 
-func NewRunner(ctx context.Context, Cancel context.CancelFunc, path string, config *types.Model_Request) *Runner {
+func NewRunner(ctx context.Context, Cancel context.CancelFunc, llamaPath, ModelPath string, config *types.Model_Request) *Runner {
 	// Convert args map to string slice
 	args := config.ToMap()
+	args["--model"] = ModelPath + "/" + config.Model
 	var argSlice []string
 	for k, v := range args {
 		if v == "" {
 			argSlice = append(argSlice, k)
 		} else {
-			argSlice = append(argSlice, fmt.Sprintf("%s=%s", k, v))
+			argSlice = append(argSlice, fmt.Sprintf("%s %s", k, v))
 		}
 	}
 
-	cmd := exec.CommandContext(ctx, fmt.Sprintf("%s/server", path), argSlice...)
-
+	cmd := exec.CommandContext(ctx, fmt.Sprintf("%s/server", llamaPath), argSlice...)
+	logger.Info("Starting server with args: ", strings.Join(cmd.Args, " "))
 	return &Runner{
 		cmd:       cmd,
 		Cancel:    Cancel,

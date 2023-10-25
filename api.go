@@ -49,7 +49,7 @@ func (s *Server) loadModelHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx, Cancel := context.WithCancel(context.Background())
 
-	newRunner := NewRunner(ctx, Cancel, s.PathToLLama, req)
+	newRunner := NewRunner(ctx, Cancel, s.PathToLLama, s.ModelPath, req)
 	//Load model
 	err = newRunner.Run()
 	if err != nil {
@@ -186,7 +186,7 @@ func (s *Server) LoadModellFromFile(modelname string) (*Runner, error) {
 	}
 
 	ctx, Cancel := context.WithCancel(context.Background())
-	newRunner := NewRunner(ctx, Cancel, s.PathToLLama, req)
+	newRunner := NewRunner(ctx, Cancel, s.PathToLLama, s.ModelPath, req)
 	//Load model
 	err = newRunner.Run()
 	if err != nil {
