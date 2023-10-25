@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -19,6 +21,7 @@ type Server struct {
 	PathToLLama  string
 	LoadedModels map[string]*Runner
 	Server       *http.Server
+	usedPorts    map[int]bool
 }
 
 func (s *Server) loadModelHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,6 +41,11 @@ func (s *Server) loadModelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req.ModelName = modelname
+
+	if _, ok := s.usedPorts[req.Port]; ok {
+		http.Error(w, "Port already in use", http.StatusBadRequest)
+		return
+	}
 
 	ctx, Cancel := context.WithCancel(context.Background())
 
@@ -61,9 +69,11 @@ func (s *Server) loadModelHandler(w http.ResponseWriter, r *http.Request) {
 			logger.Error(err)
 		}
 		Cancel()
+		delete(s.usedPorts, s.LoadedModels[modelname].Config.Port)
 		delete(s.LoadedModels, modelname)
 	}()
 
+	s.usedPorts[req.Port] = true
 	s.LoadedModels[req.ModelName] = newRunner
 
 	w.Write([]byte("Model loaded"))
@@ -78,6 +88,8 @@ func (s *Server) unloadModelHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Model not loaded", http.StatusBadRequest)
 		return
 	}
+
+	delete(s.usedPorts, s.LoadedModels[modelname].Config.Port)
 	delete(s.LoadedModels, modelname)
 
 }
@@ -169,6 +181,10 @@ func (s *Server) LoadModellFromFile(modelname string) (*Runner, error) {
 	}
 	req.ModelName = modelname
 
+	if _, ok := s.usedPorts[req.Port]; ok {
+		return nil, fmt.Errorf("Port %d already in use", req.Port)
+	}
+
 	ctx, Cancel := context.WithCancel(context.Background())
 	newRunner := NewRunner(ctx, Cancel, s.PathToLLama, req)
 	//Load model
@@ -189,9 +205,11 @@ func (s *Server) LoadModellFromFile(modelname string) (*Runner, error) {
 			logger.Error(err)
 		}
 		Cancel()
+		delete(s.usedPorts, s.LoadedModels[modelname].Config.Port)
 		delete(s.LoadedModels, modelname)
 	}()
 
+	s.usedPorts[req.Port] = true
 	s.LoadedModels[modelname] = newRunner
 	return newRunner, nil
 
@@ -279,10 +297,73 @@ func (s *Server) DeleteKonfigHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Konfig deleted"))
 }
 
+func (s *Server) completionProxy(w http.ResponseWriter, r *http.Request) {
+	// Access the model value from the path
+	vars := mux.Vars(r)
+	modelname := vars["model"]
+
+	//check if model is loaded
+	if _, ok := s.LoadedModels[modelname]; !ok {
+		http.Error(w, "Model not loaded", http.StatusBadRequest)
+		return
+	}
+
+	s.genericProxy(w, r, "/completion", s.LoadedModels[modelname].Config.Port)
+}
+
+func (s *Server) infillProxy(w http.ResponseWriter, r *http.Request) {
+	// Access the model value from the path
+	vars := mux.Vars(r)
+	modelname := vars["model"]
+
+	//check if model is loaded
+	if _, ok := s.LoadedModels[modelname]; !ok {
+		http.Error(w, "Model not loaded", http.StatusBadRequest)
+		return
+	}
+	s.genericProxy(w, r, "/infill", s.LoadedModels[modelname].Config.Port)
+
+}
+
+func (s *Server) genericProxy(w http.ResponseWriter, r *http.Request, path string, port int) {
+	//proxy request to model
+	newRequest := &http.Request{
+		URL: &url.URL{
+			Scheme: r.URL.Scheme,
+			Host:   fmt.Sprintf("localhost:%d", port),
+			Path:   path,
+		},
+		Method: r.Method,
+		Header: r.Header,
+		Body:   r.Body,
+	}
+	// Send the proxy request
+	resp, err := http.DefaultClient.Do(newRequest)
+	if err != nil {
+		http.Error(w, "Failed to proxy request", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Copy headers and status code
+	for k, vv := range resp.Header {
+		for _, v := range vv {
+			w.Header().Add(k, v)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+
+	// Copy body
+	io.Copy(w, resp.Body)
+}
+
 var logger = logrus.New()
 
 func (s *Server) AddRoutes() {
 	r := mux.NewRouter()
+
+	r.HandleFunc("/api/v1/{model}/completion", s.completionProxy).Methods("POST")
+	r.HandleFunc("/api/v1/{model}/infill", s.infillProxy).Methods("POST")
 
 	r.HandleFunc("/api/v1/{model}/load", s.loadModelHandler).Methods("POST")
 	r.HandleFunc("/api/v1/{model}/unload", s.unloadModelHandler).Methods("GET")
@@ -305,6 +386,7 @@ func GetServer(ModelPath, PathToLLama, Addr string) *Server {
 		ModelPath:    ModelPath,
 		PathToLLama:  PathToLLama,
 		LoadedModels: map[string]*Runner{},
+		usedPorts:    map[int]bool{8080: true},
 	}
 	s.AddRoutes()
 	s.Server = &http.Server{
