@@ -51,8 +51,8 @@ type Prediction_Request struct {
 	NCtx  int    `json:"n_ctx,omitempty" default:"0"` //not set for request
 }
 
-func NewPredictionRequestWithDefaults() Prediction_Request {
-	pr := Prediction_Request{}
+func NewPredictionRequestWithDefaults() *Prediction_Request {
+	pr := &Prediction_Request{}
 	t := reflect.TypeOf(pr)
 	v := reflect.ValueOf(&pr).Elem()
 
