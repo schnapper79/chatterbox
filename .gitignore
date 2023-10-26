@@ -1,1 +1,2 @@
 cmd/chatterbox/dist
+*.log
