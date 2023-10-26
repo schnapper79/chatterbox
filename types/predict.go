@@ -45,7 +45,7 @@ type Prediction_Request struct {
 	NProbs      int           `json:"n_probs,omitempty" default:"0"`
 	SlotID      int           `json:"slot_id" default:"-1"`         //default=-1 => idle slot
 	CachePrompt bool          `json:"cache_prompt" default:"false"` //default=false
-	SystemPromt *SystemPrompt `json:"system_prompt"`
+	SystemPromt *SystemPrompt `json:"system_prompt,omitempty"`
 
 	Model string `json:"model,omitempty" default:""`  //not set for request
 	NCtx  int    `json:"n_ctx,omitempty" default:"0"` //not set for request

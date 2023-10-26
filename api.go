@@ -329,7 +329,7 @@ func (s *Server) genericProxy(w http.ResponseWriter, r *http.Request, path strin
 	//proxy request to model
 	newRequest := &http.Request{
 		URL: &url.URL{
-			Scheme: r.URL.Scheme,
+			Scheme: "http",
 			Host:   fmt.Sprintf("localhost:%d", port),
 			Path:   path,
 		},
