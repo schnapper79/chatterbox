@@ -81,6 +81,13 @@ func NewPredictionRequestWithDefaults() *Prediction_Request {
 			if bVal, err := strconv.ParseBool(def); err == nil {
 				fv.SetBool(bVal)
 			}
+		case reflect.Ptr:
+			// Now you need to check what the pointer points to
+			elemType := field.Type.Elem()
+			if elemType.Name() == "SystemPrompt" {
+				newPrompt := SystemPrompt{}
+				fv.Set(reflect.ValueOf(&newPrompt))
+			}
 		}
 	}
 	return &pr
