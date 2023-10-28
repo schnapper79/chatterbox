@@ -7,6 +7,11 @@ import (
 	"strconv"
 )
 
+type Descriptor struct {
+	Prompt  string `json:"prompt"`
+	Comment string `json:"comment"`
+}
+
 type Model_Request struct {
 	Model       string `json:"model" llama:"model" default:""`
 	ModelName   string `json:"modelName,omitempty" llama:"alias" default:""`
@@ -27,10 +32,11 @@ type Model_Request struct {
 	LoraBase    string `json:"loraBase,omitempty" llama:"lora-base" default:""`
 	LoraAdapter string `json:"loraAdapter,omitempty" llama:"lora" default:""`
 
-	ParallelSlots   int    `json:"parallelSlots,omitempty" llama:"parallel" default:"1"` //defaults to 1
-	Port            int    `json:"port,omitempty" llama:"port" default:"8080"`           //defaults to 8080
-	Host            string `json:"host,omitempty" llama:"host" default:"localhost"`      //defaults to localhost
-	SystemPromtFile string `json:"systemPromptFile,omitempty" llama:"system-prompt-file" default:""`
+	ParallelSlots   int         `json:"parallelSlots,omitempty" llama:"parallel" default:"1"` //defaults to 1
+	Port            int         `json:"port,omitempty" llama:"port" default:"8080"`           //defaults to 8080
+	Host            string      `json:"host,omitempty" llama:"host" default:"localhost"`      //defaults to localhost
+	SystemPromtFile string      `json:"systemPromptFile,omitempty" llama:"system-prompt-file" default:""`
+	Decription      *Descriptor `json:"description,omitempty"`
 }
 
 func NewModelRequestWithDefaults() *Model_Request {
@@ -94,6 +100,13 @@ func (mr *Model_Request) ToMap() map[string]string {
 			val := fv.Bool()
 			if defVal, err := strconv.ParseBool(def); err == nil && val != defVal && val {
 				m[key] = ""
+			}
+		case reflect.Ptr:
+			// Now you need to check what the pointer points to
+			elemType := field.Type.Elem()
+			if elemType.Name() == "Decription" {
+				newDescriptor := Descriptor{}
+				fv.Set(reflect.ValueOf(&newDescriptor))
 			}
 		}
 	}

@@ -1,10 +1,9 @@
 package chatterbox
 
 import (
-	"bytes"
-
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -28,7 +27,7 @@ func NewRunner(ctx context.Context, Cancel context.CancelFunc, llamaPath, ModelP
 		if v == "" {
 			argSlice = append(argSlice, k)
 		} else {
-			argSlice = append(argSlice, fmt.Sprintf("%s %s", k, v))
+			argSlice = append(argSlice, k, v)
 		}
 	}
 
@@ -44,34 +43,36 @@ func NewRunner(ctx context.Context, Cancel context.CancelFunc, llamaPath, ModelP
 }
 
 func (r *Runner) Run() error {
-	var stdout, stderr bytes.Buffer
+	/*var stdout, stderr bytes.Buffer
 	r.cmd.Stdout = &stdout
 	r.cmd.Stderr = &stderr
-
+	*/
+	r.cmd.Stdout = os.Stdout
+	r.cmd.Stderr = os.Stderr
 	if err := r.cmd.Start(); err != nil {
 		return err
 	}
-
-	go func() {
-		for {
-			line, err := stdout.ReadString('\n')
-			if err != nil {
-				break
+	/*
+		go func() {
+			for {
+				line, err := stdout.ReadString('\n')
+				if err != nil {
+					break
+				}
+				r.LogChan <- strings.TrimSpace(line)
 			}
-			r.LogChan <- strings.TrimSpace(line)
-		}
-	}()
+		}()
 
-	go func() {
-		for {
-			line, err := stderr.ReadString('\n')
-			if err != nil {
-				break
+		go func() {
+			for {
+				line, err := stderr.ReadString('\n')
+				if err != nil {
+					break
+				}
+				r.LogChan <- strings.TrimSpace(line)
 			}
-			r.LogChan <- strings.TrimSpace(line)
-		}
-	}()
-
+		}()
+	*/
 	go func() {
 		if err := r.cmd.Wait(); err != nil {
 			r.ErrorChan <- err
